@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JOSNA LGZ Sociality</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        /* Color Scheme */
+        .primary-color {
+            color: #10B981; /* Emerald Green */
+        }
+        
+        .secondary-color {
+            color: #3B82F6; /* Blue */
+        }
+        
+        .bg-primary {
+            background-color: #10B981;
+        }
+        
+        .bg-secondary {
+            background-color: #3B82F6;
+        }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
+        }
+        
+        .border-primary {
+            border-color: #10B981;
+        }
+        
+        .border-secondary {
+            border-color: #3B82F6;
+        }
+        
+        /* Chat bubbles */
+        .chat-bubble {
+            max-width: 70%;
+            border-radius: 1rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease-out;
+        }
+        
+        .chat-bubble.sent {
+            background-color: #3B82F6;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+        
+        .chat-bubble.received {
+            background-color: #E5E7EB;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Post cards */
+        .post-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .post-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .like-btn.liked {
+            color: #EF4444;
+        }
+        
+        .reminder-badge {
+            background-color: #FEF3C7;
+            color: #92400E;
+            transition: all 0.2s ease;
+        }
+        
+        .reminder-badge:hover {
+            transform: scale(1.05);
+        }
+        
+        .tab-active {
+            border-bottom: 3px solid #10B981;
+            transition: border-color 0.3s ease;
+        }
+        
+        /* Buttons */
+        .btn {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transform: translateY(0);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
+            border-radius: 10px;
+        }
+        
+        /* Animation for new messages */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .new-message {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Loading dots */
+        .typing-indicator {
+            display: flex;
+            padding: 10px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            margin: 0 3px;
+            background-color: #3B82F6;
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        
+        .typing-dot:nth-child(1) {
+            animation: typing 1s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation: typing 1s infinite 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation: typing 1s infinite 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 100% { opacity: 0.4; transform: translateY(0); }
+            50% { opacity: 1; transform: translateY(-5px); }
+        }
+        
+        /* Comment section styles */
+        .comment-section {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .comment-item {
+            border-left: 2px solid #E5E7EB;
+            padding-left: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .comment-item:hover {
+            border-left-color: #10B981;
+        }
+        
+        /* Date picker styles */
+        .date-picker {
+            border: 1px solid #E5E7EB;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+        
+        .date-picker:focus {
+            border-color: #10B981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
+        
+        /* iOS-style preloader */
+        .ios-preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        
+        .ios-loader {
+            width: 44px;
+            height: 44px;
+            position: relative;
+        }
+        
+        .ios-loader-spinner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid rgba(16, 185, 129, 0.2);
+            border-top-color: #10B981;
+            animation: spin 1s linear infinite;
+        }
+        
+        .ios-loader-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #10B981;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Input fields */
+        .input-field {
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .input-field:focus {
+            border-color: #10B981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
+        
+        /* Avatar styles */
+        .avatar {
+            transition: all 0.3s ease;
+        }
+        
+        .avatar:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Card hover effects */
+        .hover-scale {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .hover-scale:hover {
+            transform: scale(1.02);
+        }
+        
+        /* Ripple effect */
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ripple:after {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform .5s, opacity 1s;
+        }
+        
+        .ripple:active:after {
+            transform: scale(0, 0);
+            opacity: .3;
+            transition: 0s;
+        }
+        
+        /* Pulse animation */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Floating action button */
+        .fab {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .fab:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px);
+        }
+        
+        /* Tab underline animation */
+        .tab-underline {
+            position: relative;
+        }
+        
+        .tab-underline:after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            transform: scaleX(0);
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: #10B981;
+            transform-origin: bottom right;
+            transition: transform 0.3s ease-out;
+        }
+        
+        .tab-underline:hover:after {
+            transform: scaleX(1);
+            transform-origin: bottom left;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- iOS-style Preloader -->
+    <div class="ios-preloader" id="preloader">
+        <div class="ios-loader">
+            <div class="ios-loader-spinner"></div>
+            <div class="ios-loader-logo">JL</div>
+        </div>
+    </div>
+
+    <!-- Firebase Config -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        
+        // Enable offline persistence
+        db.enablePersistence()
+            .catch((err) => {
+                console.log("Firebase persistence error: ", err);
+            });
+            
+        // Hide preloader after short delay (1.5 seconds)
+        setTimeout(() => {
+            const preloader = document.getElementById('preloader');
+            preloader.style.opacity = '0';
+            setTimeout(() => {
+                preloader.style.display = 'none';
+                document.getElementById('authScreens').classList.remove('hidden');
+            }, 500);
+        }, 1500);
+    </script>
+
+    <!-- App Container -->
+    <div class="max-w-md mx-auto bg-white min-h-screen relative overflow-hidden" id="app">
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center hidden">
+            <div class="animate-spin rounded-full h-20 w-20 border-t-2 border-b-2 border-primary mb-4"></div>
+            <h1 class="text-3xl font-bold primary-color">JOSNA LGZ</h1>
+            <p class="text-gray-500 mt-2">Sociality</p>
+        </div>
+
+        <!-- Auth Screens -->
+        <div id="authScreens" class="hidden">
+            <!-- Login Screen -->
+            <div id="loginScreen" class="p-6">
+                <div class="text-center mb-10">
+                    <h1 class="text-4xl font-bold primary-color mb-2">JOSNA LGZ</h1>
+                    <p class="text-gray-500">Connect through emails</p>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-600 mb-2">Email</label>
+                    <input type="email" id="loginEmail" class="w-full bg-gray-100 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary input-field">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-600 mb-2">Password</label>
+                    <input type="password" id="loginPassword" class="w-full bg-gray-100 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary input-field">
+                </div>
+                
+                <button id="loginBtn" class="w-full bg-primary text-white font-bold py-3 rounded-lg mb-4 hover:bg-opacity-90 transition btn ripple">
+                    Login
+                </button>
+                
+                <p class="text-center text-gray-500">Don't have an account? <span id="showRegisterBtn" class="primary-color cursor-pointer hover:underline">Register</span></p>
+            </div>
+            
+            <!-- Register Screen -->
+            <div id="registerScreen" class="p-6 hidden">
+                <div class="text-center mb-10">
+                    <h1 class="text-4xl font-bold primary-color mb-2">Create Account</h1>
+                    <p class="text-gray-500">Join JOSNA LGZ community</p>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-600 mb-2">Username</label>
+                    <input type="text" id="registerUsername" class="w-full bg-gray-100 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary input-field">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-600 mb-2">Email</label>
+                    <input type="email" id="registerEmail" class="w-full bg-gray-100 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary input-field">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-600 mb-2">Password</label>
+                    <input type="password" id="registerPassword" class="w-full bg-gray-100 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary input-field">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-600 mb-2">Class/Stream</label>
+                    <select id="registerClass" class="w-full bg-gray-100 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary input-field">
+                        <option value="">Select your class</option>
+                        <option value="Science">Science</option>
+                        <option value="Arts">Arts</option>
+                        <option value="Commerce">Commerce</option>
+                    </select>
+                </div>
+                
+                <button id="registerBtn" class="w-full bg-primary text-white font-bold py-3 rounded-lg mb-4 hover:bg-opacity-90 transition btn ripple">
+                    Register
+                </button>
+                
+                <p class="text-center text-gray-500">Already have an account? <span id="showLoginBtn" class="primary-color cursor-pointer hover:underline">Login</span></p>
+            </div>
+        </div>
+        
+        <!-- Main App -->
+        <div id="mainApp" class="hidden">
+            <!-- Header -->
+            <header class="bg-white p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold primary-color">JOSNA LGZ</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="searchBtn" class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fas fa-search text-xl"></i>
+                    </button>
+                    <button id="profileBtn" class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fas fa-user text-xl"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200">
+                <button id="chatsTab" class="flex-1 py-3 font-medium text-center tab-underline">
+                    <span class="primary-color">Chats</span>
+                </button>
+                <button id="postsTab" class="flex-1 py-3 font-medium text-center tab-underline">
+                    <span class="text-gray-500">Posts</span>
+                </button>
+                <button id="discoverTab" class="flex-1 py-3 font-medium text-center tab-underline">
+                    <span class="text-gray-500">Discover</span>
+                </button>
+            </div>
+            
+            <!-- Content Area -->
+            <div class="overflow-y-auto" style="height: calc(100vh - 128px)">
+                <!-- Chats Section -->
+                <div id="chatsSection">
+                    <!-- Chat List -->
+                    <div id="chatList" class="divide-y divide-gray-200">
+                        <!-- Chats will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Posts Section -->
+                <div id="postsSection" class="hidden p-4">
+                    <!-- Create Post -->
+                    <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200 hover-scale">
+                        <div class="flex items-center mb-3">
+                            <div id="currentUserAvatar" class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 avatar">
+                                <i class="fas fa-user text-gray-500"></i>
+                            </div>
+                            <input type="text" id="postTitle" placeholder="Post title..." class="bg-gray-100 rounded-full px-4 py-2 text-gray-800 w-full focus:outline-none focus:ring-1 focus:ring-primary input-field">
+                        </div>
+                        <textarea id="postContent" placeholder="What's on your mind?" class="bg-gray-100 rounded-lg p-3 text-gray-800 w-full h-20 mb-3 focus:outline-none focus:ring-1 focus:ring-primary input-field"></textarea>
+                        
+                        <!-- Reminder toggle -->
+                        <div class="mb-3 flex items-center">
+                            <input type="checkbox" id="isReminder" class="mr-2">
+                            <label for="isReminder" class="text-sm text-gray-600">This is a reminder</label>
+                        </div>
+                        
+                        <!-- Reminder date picker (hidden by default) -->
+                        <div id="reminderDateContainer" class="mb-3 hidden">
+                            <label class="block text-sm text-gray-600 mb-1">Reminder Date</label>
+                            <input type="date" id="reminderDate" class="date-picker">
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <button id="createPostBtn" class="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-opacity-90 btn ripple">
+                                    Post
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Posts Feed -->
+                    <div id="postsFeed" class="space-y-4">
+                        <!-- Posts will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Discover Section -->
+                <div id="discoverSection" class="hidden p-4">
+                    <h2 class="text-xl font-bold mb-4">Discover People</h2>
+                    <div id="userSearchContainer" class="mb-4">
+                        <input type="text" id="userSearchInput" placeholder="Search users..." class="w-full bg-gray-100 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary input-field">
+                    </div>
+                    <div id="discoverUsersList" class="space-y-4">
+                        <!-- Users will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Navigation -->
+            <nav class="bg-white border-t border-gray-200 flex justify-around py-3 sticky bottom-0 shadow-sm">
+                <button id="homeBtn" class="text-primary transition-colors">
+                    <i class="fas fa-home text-xl"></i>
+                </button>
+                <button id="newChatBtn" class="text-gray-500 hover:text-primary transition-colors">
+                    <i class="fas fa-comment-medical text-xl"></i>
+                </button>
+                <button id="newPostBtn" class="text-gray-500 hover:text-primary transition-colors fab bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center">
+                    <i class="fas fa-plus text-xl"></i>
+                </button>
+            </nav>
+        </div>
+        
+        <!-- Chat Screen -->
+        <div id="chatScreen" class="fixed inset-0 bg-white z-20 hidden flex flex-col">
+            <!-- Chat Header -->
+            <div class="bg-white p-4 border-b border-gray-200 flex items-center sticky top-0 shadow-sm">
+                <button id="backToChatsBtn" class="mr-4 text-primary transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="flex-1">
+                    <h2 id="chatUserName" class="font-bold text-gray-800"></h2>
+                    <p id="chatUserStatus" class="text-xs text-gray-500">Online</p>
+                </div>
+                <button class="text-gray-500 hover:text-primary transition-colors">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+            </div>
+            
+            <!-- Messages -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2">
+                <!-- Messages will be dynamically added here -->
+            </div>
+            
+            <!-- Message Input -->
+            <div class="bg-white p-3 border-t border-gray-200 sticky bottom-0 shadow-sm">
+                <div class="flex items-center">
+                    <button class="text-gray-500 hover:text-primary mx-2 transition-colors">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <input type="text" id="messageInput" placeholder="Type a message..." class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary input-field">
+                    <button id="sendMessageBtn" class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center ml-2 btn ripple">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div id="typingIndicator" class="typing-indicator hidden">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Screen -->
+        <div id="profileScreen" class="fixed inset-0 bg-white z-20 hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-8">
+                    <button id="backToMainBtn" class="text-primary transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 class="text-xl font-bold primary-color">Profile</h2>
+                    <div class="w-6"></div> <!-- Spacer -->
+                </div>
+                
+                <div class="flex flex-col items-center mb-6">
+                    <div id="profileAvatar" class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mb-4 avatar pulse">
+                        <i class="fas fa-user text-3xl text-gray-500"></i>
+                    </div>
+                    <h3 id="profileUsername" class="text-xl font-bold text-gray-800"></h3>
+                    <p id="profileEmail" class="text-gray-500 text-sm"></p>
+                    <p id="profileClass" class="text-gray-500 text-sm mt-1"></p>
+                    
+                    <div class="flex mt-4 space-x-4">
+                        <div class="text-center">
+                            <p id="profilePostsCount" class="font-bold text-gray-800">0</p>
+                            <p class="text-xs text-gray-500">Posts</p>
+                        </div>
+                        <div class="text-center">
+                            <p id="profileFollowersCount" class="font-bold text-gray-800">0</p>
+                            <p class="text-xs text-gray-500">Followers</p>
+                        </div>
+                        <div class="text-center">
+                            <p id="profileFollowingCount" class="font-bold text-gray-800">0</p>
+                            <p class="text-xs text-gray-500">Following</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="profileActions" class="mb-6">
+                    <!-- Follow/Edit Profile button will be added here dynamically -->
+                </div>
+                
+                <div class="space-y-4">
+                    <button class="w-full bg-gray-100 text-gray-800 p-3 rounded-lg text-left flex items-center hover:bg-gray-200 transition-colors hover-scale">
+                        <i class="fas fa-cog text-gray-500 mr-3"></i> Settings
+                    </button>
+                    <button id="viewFollowersBtn" class="w-full bg-gray-100 text-gray-800 p-3 rounded-lg text-left flex items-center hover:bg-gray-200 transition-colors hover-scale">
+                        <i class="fas fa-users text-gray-500 mr-3"></i> View Followers
+                    </button>
+                    <button id="viewFollowingBtn" class="w-full bg-gray-100 text-gray-800 p-3 rounded-lg text-left flex items-center hover:bg-gray-200 transition-colors hover-scale">
+                        <i class="fas fa-user-friends text-gray-500 mr-3"></i> View Following
+                    </button>
+                    <button class="w-full bg-gray-100 text-gray-800 p-3 rounded-lg text-left flex items-center hover:bg-gray-200 transition-colors hover-scale">
+                        <i class="fas fa-question-circle text-gray-500 mr-3"></i> Help
+                    </button>
+                    <button id="logoutBtn" class="w-full bg-red-100 text-red-800 p-3 rounded-lg text-left flex items-center hover:bg-red-200 transition-colors hover-scale">
+                        <i class="fas fa-sign-out-alt mr-3"></i> Logout
+                    </button>
+                </div>
+                
+                <div class="mt-8 text-center text-gray-400 text-xs">
+                    <p>JOSNA LGZ Sociality</p>
+                    <p>Developed by Mugabi Jeremiah</p>
+                    <p class="mt-2">v1.0.0</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Followers/Following Screen -->
+        <div id="followScreen" class="fixed inset-0 bg-white z-30 hidden">
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-6">
+                    <button id="backFromFollowBtn" class="text-primary transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 id="followScreenTitle" class="text-xl font-bold primary-color"></h2>
+                    <div class="w-6"></div> <!-- Spacer -->
+                </div>
+                
+                <div id="followList" class="divide-y divide-gray-200">
+                    <!-- Followers/Following will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- New Chat Screen -->
+        <div id="newChatScreen" class="fixed inset-0 bg-white z-20 hidden">
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-6">
+                    <button id="backFromNewChatBtn" class="text-primary transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 class="text-xl font-bold primary-color">New Chat</h2>
+                    <div class="w-6"></div>
+                </div>
+                
+                <div class="mb-4">
+                    <input type="text" id="newChatSearch" placeholder="Search users..." class="w-full bg-gray-100 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary input-field">
+                </div>
+                
+                <div id="newChatUsersList" class="divide-y divide-gray-200">
+                    <!-- Users will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=jerrypro/new-josna-lgz-sociality" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
+</html>
