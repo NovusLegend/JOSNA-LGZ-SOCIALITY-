@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JOSNA LGZ Sociality</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #000;
+            color: #fff;
+        }
+        
+        .lemon-green {
+            color: #C8FF00;
+        }
+        
+        .bg-lemon-green {
+            background-color: #C8FF00;
+        }
+        
+        .border-lemon-green {
+            border-color: #C8FF00;
+        }
+        
+        .chat-bubble {
+            max-width: 70%;
+            border-radius: 1rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .chat-bubble.sent {
+            background-color: #C8FF00;
+            color: #000;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+        
+        .chat-bubble.received {
+            background-color: #222;
+            color: #fff;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+        
+        .post-card {
+            background-color: #111;
+            border-radius: 0.75rem;
+            transition: transform 0.2s;
+        }
+        
+        .post-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .like-btn.liked {
+            color: #ff4d4d;
+        }
+        
+        .tab-active {
+            border-bottom: 3px solid #C8FF00;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #C8FF00;
+            border-radius: 10px;
+        }
+        
+        /* Animation for new messages */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .new-message {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Loading dots */
+        .typing-indicator {
+            display: flex;
+            padding: 10px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            margin: 0 2px;
+            background-color: #C8FF00;
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        
+        .typing-dot:nth-child(1) {
+            animation: typing 1s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation: typing 1s infinite 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation: typing 1s infinite 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 100% { opacity: 0.4; transform: translateY(0); }
+            50% { opacity: 1; transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Firebase Config -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        
+        // Enable offline persistence
+        db.enablePersistence()
+            .catch((err) => {
+                console.log("Firebase persistence error: ", err);
+            });
+    </script>
+
+    <!-- App Container -->
+    <div class="max-w-md mx-auto bg-black min-h-screen relative overflow-hidden" id="app">
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center">
+            <div class="animate-spin rounded-full h-20 w-20 border-t-2 border-b-2 border-lemon-green mb-4"></div>
+            <h1 class="text-3xl font-bold lemon-green">JOSNA LGZ</h1>
+            <p class="text-gray-400 mt-2">Sociality</p>
+        </div>
+
+        <!-- Auth Screens -->
+        <div id="authScreens" class="hidden">
+            <!-- Login Screen -->
+            <div id="loginScreen" class="p-6">
+                <div class="text-center mb-10">
+                    <h1 class="text-4xl font-bold lemon-green mb-2">JOSNA LGZ</h1>
+                    <p class="text-gray-400">Connect through emails</p>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-400 mb-2">Email</label>
+                    <input type="email" id="loginEmail" class="w-full bg-gray-900 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-lemon-green">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-400 mb-2">Password</label>
+                    <input type="password" id="loginPassword" class="w-full bg-gray-900 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-lemon-green">
+                </div>
+                
+                <button id="loginBtn" class="w-full bg-lemon-green text-black font-bold py-3 rounded-lg mb-4 hover:bg-opacity-90 transition">
+                    Login
+                </button>
+                
+                <p class="text-center text-gray-400">Don't have an account? <span id="showRegisterBtn" class="lemon-green cursor-pointer">Register</span></p>
+            </div>
+            
+            <!-- Register Screen -->
+            <div id="registerScreen" class="p-6 hidden">
+                <div class="text-center mb-10">
+                    <h1 class="text-4xl font-bold lemon-green mb-2">Create Account</h1>
+                    <p class="text-gray-400">Join JOSNA LGZ community</p>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Username</label>
+                    <input type="text" id="registerUsername" class="w-full bg-gray-900 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-lemon-green">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Email</label>
+                    <input type="email" id="registerEmail" class="w-full bg-gray-900 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-lemon-green">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Password</label>
+                    <input type="password" id="registerPassword" class="w-full bg-gray-900 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-lemon-green">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-400 mb-2">Class/Stream</label>
+                    <select id="registerClass" class="w-full bg-gray-900 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-lemon-green">
+                        <option value="">Select your class</option>
+                        <option value="Science">Science</option>
+                        <option value="Arts">Arts</option>
+                        <option value="Commerce">Commerce</option>
+                    </select>
+                </div>
+                
+                <button id="registerBtn" class="w-full bg-lemon-green text-black font-bold py-3 rounded-lg mb-4 hover:bg-opacity-90 transition">
+                    Register
+                </button>
+                
+                <p class="text-center text-gray-400">Already have an account? <span id="showLoginBtn" class="lemon-green cursor-pointer">Login</span></p>
+            </div>
+        </div>
+        
+        <!-- Main App -->
+        <div id="mainApp" class="hidden">
+            <!-- Header -->
+            <header class="bg-black p-4 border-b border-gray-800 flex justify-between items-center sticky top-0 z-10">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold lemon-green">JOSNA LGZ</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="searchBtn" class="text-gray-400 hover:text-lemon-green">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button id="profileBtn" class="text-gray-400 hover:text-lemon-green">
+                        <i class="fas fa-user"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-800">
+                <button id="chatsTab" class="flex-1 py-3 font-medium text-center tab-active">
+                    <span class="lemon-green">Chats</span>
+                </button>
+                <button id="postsTab" class="flex-1 py-3 font-medium text-center text-gray-400">
+                    <span>Posts</span>
+                </button>
+                <button id="discoverTab" class="flex-1 py-3 font-medium text-center text-gray-400">
+                    <span>Discover</span>
+                </button>
+            </div>
+            
+            <!-- Content Area -->
+            <div class="overflow-y-auto" style="height: calc(100vh - 128px)">
+                <!-- Chats Section -->
+                <div id="chatsSection">
+                    <!-- Chat List -->
+                    <div id="chatList" class="divide-y divide-gray-800">
+                        <!-- Chats will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Posts Section -->
+                <div id="postsSection" class="hidden p-4">
+                    <!-- Create Post -->
+                    <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                        <div class="flex items-center mb-3">
+                            <div id="currentUserAvatar" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text" id="postTitle" placeholder="Post title..." class="bg-gray-800 rounded-full px-4 py-2 text-white w-full focus:outline-none focus:ring-1 focus:ring-lemon-green">
+                        </div>
+                        <textarea id="postContent" placeholder="What's on your mind?" class="bg-gray-800 rounded-lg p-3 text-white w-full h-20 mb-3 focus:outline-none focus:ring-1 focus:ring-lemon-green"></textarea>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <label for="postImage" class="text-gray-400 hover:text-lemon-green cursor-pointer">
+                                    <i class="fas fa-image mr-1"></i> Add Image
+                                </label>
+                                <input type="file" id="postImage" accept="image/*" class="hidden">
+                            </div>
+                            <button id="createPostBtn" class="bg-lemon-green text-black px-4 py-2 rounded-lg font-medium hover:bg-opacity-90">
+                                Post
+                            </button>
+                        </div>
+                        <div id="imagePreview" class="mt-3 hidden">
+                            <img id="previewImage" src="#" alt="Preview" class="max-h-40 rounded-lg">
+                            <button id="removeImageBtn" class="text-red-500 text-sm mt-1">
+                                <i class="fas fa-times mr-1"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Posts Feed -->
+                    <div id="postsFeed" class="space-y-4">
+                        <!-- Posts will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Discover Section -->
+                <div id="discoverSection" class="hidden p-4">
+                    <h2 class="text-xl font-bold mb-4">Discover People</h2>
+                    <div id="userSearchContainer" class="mb-4">
+                        <input type="text" id="userSearchInput" placeholder="Search users..." class="w-full bg-gray-900 rounded-lg p-3 text-white focus:outline-none focus:ring-1 focus:ring-lemon-green">
+                    </div>
+                    <div id="discoverUsersList" class="space-y-4">
+                        <!-- Users will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Navigation -->
+            <nav class="bg-black border-t border-gray-800 flex justify-around py-3 sticky bottom-0">
+                <button id="homeBtn" class="text-lemon-green">
+                    <i class="fas fa-home text-xl"></i>
+                </button>
+                <button id="newChatBtn" class="text-gray-400 hover:text-lemon-green">
+                    <i class="fas fa-comment-medical text-xl"></i>
+                </button>
+                <button id="newPostBtn" class="text-gray-400 hover:text-lemon-green">
+                    <i class="fas fa-plus-circle text-xl"></i>
+                </button>
+            </nav>
+        </div>
+        
+        <!-- Chat Screen -->
+        <div id="chatScreen" class="fixed inset-0 bg-black z-20 hidden flex flex-col">
+            <!-- Chat Header -->
+            <div class="bg-black p-4 border-b border-gray-800 flex items-center sticky top-0">
+                <button id="backToChatsBtn" class="mr-4 text-lemon-green">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="flex-1">
+                    <h2 id="chatUserName" class="font-bold text-white"></h2>
+                    <p id="chatUserStatus" class="text-xs text-gray-400">Online</p>
+                </div>
+                <button class="text-gray-400 hover:text-lemon-green">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+            </div>
+            
+            <!-- Messages -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2">
+                <!-- Messages will be dynamically added here -->
+            </div>
+            
+            <!-- Message Input -->
+            <div class="bg-black p-3 border-t border-gray-800 sticky bottom-0">
+                <div class="flex items-center">
+                    <button class="text-gray-400 hover:text-lemon-green mx-2">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <input type="text" id="messageInput" placeholder="Type a message..." class="flex-1 bg-gray-900 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-lemon-green">
+                    <button id="sendMessageBtn" class="bg-lemon-green text-black rounded-full w-10 h-10 flex items-center justify-center ml-2">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div id="typingIndicator" class="typing-indicator hidden">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Screen -->
+        <div id="profileScreen" class="fixed inset-0 bg-black z-20 hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-8">
+                    <button id="backToMainBtn" class="text-lemon-green">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 class="text-xl font-bold lemon-green">Profile</h2>
+                    <div class="w-6"></div> <!-- Spacer -->
+                </div>
+                
+                <div class="flex flex-col items-center mb-6">
+                    <div id="profileAvatar" class="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+                        <i class="fas fa-user text-3xl text-gray-400"></i>
+                    </div>
+                    <h3 id="profileUsername" class="text-xl font-bold"></h3>
+                    <p id="profileEmail" class="text-gray-400 text-sm"></p>
+                    <p id="profileClass" class="text-gray-400 text-sm mt-1"></p>
+                    
+                    <div class="flex mt-4 space-x-4">
+                        <div class="text-center">
+                            <p id="profilePostsCount" class="font-bold">0</p>
+                            <p class="text-xs text-gray-400">Posts</p>
+                        </div>
+                        <div class="text-center">
+                            <p id="profileFollowersCount" class="font-bold">0</p>
+                            <p class="text-xs text-gray-400">Followers</p>
+                        </div>
+                        <div class="text-center">
+                            <p id="profileFollowingCount" class="font-bold">0</p>
+                            <p class="text-xs text-gray-400">Following</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="profileActions" class="mb-6">
+                    <!-- Follow/Edit Profile button will be added here dynamically -->
+                </div>
+                
+                <div class="space-y-4">
+                    <button class="w-full bg-gray-900 text-white p-3 rounded-lg text-left flex items-center">
+                        <i class="fas fa-cog text-gray-400 mr-3"></i> Settings
+                    </button>
+                    <button id="viewFollowersBtn" class="w-full bg-gray-900 text-white p-3 rounded-lg text-left flex items-center">
+                        <i class="fas fa-users text-gray-400 mr-3"></i> View Followers
+                    </button>
+                    <button id="viewFollowingBtn" class="w-full bg-gray-900 text-white p-3 rounded-lg text-left flex items-center">
+                        <i class="fas fa-user-friends text-gray-400 mr-3"></i> View Following
+                    </button>
+                    <button class="w-full bg-gray-900 text-white p-3 rounded-lg text-left flex items-center">
+                        <i class="fas fa-question-circle text-gray-400 mr-3"></i> Help
+                    </button>
+                    <button id="logoutBtn" class="w-full bg-red-900 text-white p-3 rounded-lg text-left flex items-center">
+                        <i class="fas fa-sign-out-alt mr-3"></i> Logout
+                    </button>
+                </div>
+                
+                <div class="mt-8 text-center text-gray-500 text-xs">
+                    <p>JOSNA LGZ Sociality</p>
+                    <p>Developed by Mugabi Jeremiah</p>
+                    <p class="mt-2">v1.0.0</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Followers/Following Screen -->
+        <div id="followScreen" class="fixed inset-0 bg-black z-30 hidden">
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-6">
+                    <button id="backFromFollowBtn" class="text-lemon-green">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 id="followScreenTitle" class="text-xl font-bold lemon-green"></h2>
+                    <div class="w-6"></div> <!-- Spacer -->
+                </div>
+                
+                <div id="followList" class="divide-y divide-gray-800">
+                    <!-- Followers/Following will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- New Chat Screen -->
+        <div id="newChatScreen" class="fixed inset-0 bg-black z-20 hidden">
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-6">
+                    <button id="backFromNewChatBtn" class="text-lemon-green">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 class="text-xl font-bold lemon-green">New Chat</h2>
+                    <div class="w-6"></div> <!-- Spacer -->
+                </div>
+                
+                <div class="mb-4">
+                    <input type="text" id="searchUserInput" placeholder="Search by username..." class="w-full bg-gray-900 rounded-lg p-3 text-white focus:outline-none focus:ring-1 focus:ring-lemon-green">
+                </div>
+                
+                <div id="userList" class="divide-y divide-gray-800">
+                    <!-- Users will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Profile Screen -->
+        <div id="userProfileScreen" class="fixed inset-0 bg-black z-30 hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-8">
+                    <button id="backFromUserProfileBtn" class="text-lemon-green">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 id="userProfileUsername" class="text-xl font-bold"></h2>
+                    <div class="w-6"></div> <!-- Spacer -->
+                </div>
+                
+                <div class="flex flex-col items-center mb-6">
+                    <div id="userProfileAvatar" class="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+                        <i class="fas fa-user text-3xl text-gray-400"></i>
+                    </div>
+                    <p id="userProfileClass" class="text-gray-400 text-sm"></p>
+                    
+                    <div class="flex mt-4 space-x-4">
+                        <div class="text-center">
+                            <p id="userProfilePostsCount" class="font-bold">0</p>
+                            <p class="text-xs text-gray-400">Posts</p>
+                        </div>
+                        <div class="text-center">
+                            <p id="userProfileFollowersCount" class="font-bold">0</p>
+                            <p class="text-xs text-gray-400">Followers</p>
+                        </div>
+                        <div class="text-center">
+                            <p id="userProfileFollowingCount" class="font-bold">0</p>
+                            <p class="text-xs text-gray-400">Following</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="userProfileActions" class="mb-6">
+                    <!-- Follow/Unfollow button will be added here dynamically -->
+                </div>
+                
+                <h3 class="font-bold mb-2">Posts</h3>
+                <div id="userPostsFeed" class="space-y-4">
+                    <!-- User's posts will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const loadingScreen = document.getElementById('loadingScreen');
+        const authScreens = document.getElementById('authScreens');
+        const loginScreen = document.getElementById('loginScreen');
+        const registerScreen = document.getElementById('registerScreen');
+        const mainApp = document.getElementById('mainApp');
+        const chatsSection = document.getElementById('chatsSection');
+        const postsSection = document.getElementById('postsSection');
+        const discoverSection = document.getElementById('discoverSection');
+        const chatScreen = document.getElementById('chatScreen');
+        const profileScreen = document.getElementById('profileScreen');
+        const followScreen = document.getElementById('followScreen');
+        const newChatScreen = document.getElementById('newChatScreen');
+        const userProfileScreen = document.getElementById('userProfileScreen');
+        
+        // Buttons
+        const showRegisterBtn = document.getElementById('showRegisterBtn');
+        const showLoginBtn = document.getElementById('showLoginBtn');
+        const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const profileBtn = document.getElementById('profileBtn');
+        const backToMainBtn = document.getElementById('backToMainBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const chatsTab = document.getElementById('chatsTab');
+        const postsTab = document.getElementById('postsTab');
+        const discoverTab = document.getElementById('discoverTab');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const backToChatsBtn = document.getElementById('backToChatsBtn');
+        const backFromNewChatBtn = document.getElementById('backFromNewChatBtn');
+        const homeBtn = document.getElementById('homeBtn');
+        const newPostBtn = document.getElementById('newPostBtn');
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const createPostBtn = document.getElementById('createPostBtn');
+        const viewFollowersBtn = document.getElementById('viewFollowersBtn');
+        const viewFollowingBtn = document.getElementById('viewFollowingBtn');
+        const backFromFollowBtn = document.getElementById('backFromFollowBtn');
+        const backFromUserProfileBtn = document.getElementById('backFromUserProfileBtn');
+        
+        // Inputs
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        const registerUsername = document.getElementById('registerUsername');
+        const registerEmail = document.getElementById('registerEmail');
+        const registerPassword = document.getElementById('registerPassword');
+        const registerClass = document.getElementById('registerClass');
+        const messageInput = document.getElementById('messageInput');
+        const searchUserInput = document.getElementById('searchUserInput');
+        const postTitle = document.getElementById('postTitle');
+        const postContent = document.getElementById('postContent');
+        const postImage = document.getElementById('postImage');
+        const previewImage = document.getElementById('previewImage');
+        const imagePreview = document.getElementById('imagePreview');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+        const userSearchInput = document.getElementById('userSearchInput');
+        
+        // Containers
+        const chatList = document.getElementById('chatList');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const userList = document.getElementById('userList');
+        const postsFeed = document.getElementById('postsFeed');
+        const discoverUsersList = document.getElementById('discoverUsersList');
+        const followList = document.getElementById('followList');
+        const userPostsFeed = document.getElementById('userPostsFeed');
+        const profileActions = document.getElementById('profileActions');
+        const userProfileActions = document.getElementById('userProfileActions');
+        const typingIndicator = document.getElementById('typingIndicator');
+        
+        // Profile elements
+        const profileUsername = document.getElementById('profileUsername');
+        const profileEmail = document.getElementById('profileEmail');
+        const profileClass = document.getElementById('profileClass');
+        const profilePostsCount = document.getElementById('profilePostsCount');
+        const profileFollowersCount = document.getElementById('profileFollowersCount');
+        const profileFollowingCount = document.getElementById('profileFollowingCount');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const currentUserAvatar = document.getElementById('currentUserAvatar');
+        const chatUserName = document.getElementById('chatUserName');
+        const chatUserStatus = document.getElementById('chatUserStatus');
+        const followScreenTitle = document.getElementById('followScreenTitle');
+        const userProfileUsername = document.getElementById('userProfileUsername');
+        const userProfileClass = document.getElementById('userProfileClass');
+        const userProfilePostsCount = document.getElementById('userProfilePostsCount');
+        const userProfileFollowersCount = document.getElementById('userProfileFollowersCount');
+        const userProfileFollowingCount = document.getElementById('userProfileFollowingCount');
+        const userProfileAvatar = document.getElementById('userProfileAvatar');
+        
+        // Current app state
+        let currentUser = null;
+        let currentChatId = null;
+        let currentChatUser = null;
+        let currentViewingUserId = null;
+        let currentFollowListType = null; // 'followers' or 'following'
+        let unsubscribeChats = null;
+        let unsubscribeMessages = null;
+        let unsubscribePosts = null;
+        let unsubscribeUserPosts = null;
+        let unsubscribeFollowers = null;
+        let unsubscribeFollowing = null;
+        let unsubscribeDiscoverUsers = null;
+        
+        // Simulate loading
+        setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+            
+            // Check if user is logged in
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    currentUser = user;
+                    authScreens.classList.add('hidden');
+                    mainApp.classList.remove('hidden');
+                    loadUserProfile(user.uid);
+                    loadChats(user.uid);
+                    loadPosts();
+                    loadDiscoverUsers();
+                    
+                    // Set up real-time listeners
+                    setupRealTimeListeners(user.uid);
+                } else {
+                    authScreens.classList.remove('hidden');
+                }
+            });
+        }, 1000);
+        
+        // Event Listeners
+        showRegisterBtn.addEventListener('click', () => {
+            loginScreen.classList.add('hidden');
+            registerScreen.classList.remove('hidden');
+        });
+        
+        showLoginBtn.addEventListener('click', () => {
+            registerScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        });
+        
+        loginBtn.addEventListener('click', () => {
+            const email = loginEmail.value;
+            const password = loginPassword.value;
+            
+            if (email && password) {
+                auth.signInWithEmailAndPassword(email, password)
+                    .then(() => {
+                        authScreens.classList.add('hidden');
+                        mainApp.classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        alert(error.message);
+                    });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+        
+        registerBtn.addEventListener('click', () => {
+            const username = registerUsername.value.trim();
+            const email = registerEmail.value.trim();
+            const password = registerPassword.value;
+            const userClass = registerClass.value;
+            
+            if (username && email && password && userClass) {
+                // Check if username already exists
+                db.collection('users').where('username', '==', username).get()
+                    .then(snapshot => {
+                        if (!snapshot.empty) {
+                            throw new Error('Username already exists');
+                        }
+                        
+                        return auth.createUserWithEmailAndPassword(email, password);
+                    })
+                    .then((userCredential) => {
+                        // Save additional user info to Firestore
+                        return db.collection('users').doc(userCredential.user.uid).set({
+                            username: username,
+                            email: email,
+                            class: userClass,
+                            followers: [],
+                            following: [],
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    })
+                    .then(() => {
+                        authScreens.classList.add('hidden');
+                        mainApp.classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        alert(error.message);
+                    });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+        
+        profileBtn.addEventListener('click', () => {
+            mainApp.classList.add('hidden');
+            profileScreen.classList.remove('hidden');
+        });
+        
+        backToMainBtn.addEventListener('click', () => {
+            profileScreen.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+        });
+        
+        logoutBtn.addEventListener('click', () => {
+            // Clean up all real-time listeners
+            if (unsubscribeChats) unsubscribeChats();
+            if (unsubscribeMessages) unsubscribeMessages();
+            if (unsubscribePosts) unsubscribePosts();
+            if (unsubscribeUserPosts) unsubscribeUserPosts();
+            if (unsubscribeFollowers) unsubscribeFollowers();
+            if (unsubscribeFollowing) unsubscribeFollowing();
+            if (unsubscribeDiscoverUsers) unsubscribeDiscoverUsers();
+            
+            auth.signOut().then(() => {
+                currentUser = null;
+                profileScreen.classList.add('hidden');
+                authScreens.classList.remove('hidden');
+                loginScreen.classList.remove('hidden');
+                registerScreen.classList.add('hidden');
+            });
+        });
+        
+        chatsTab.addEventListener('click', () => {
+            postsSection.classList.add('hidden');
+            discoverSection.classList.add('hidden');
+            chatsSection.classList.remove('hidden');
+            chatsTab.classList.add('tab-active');
+            chatsTab.querySelector('span').classList.add('lemon-green');
+            chatsTab.querySelector('span').classList.remove('text-gray-400');
+            postsTab.classList.remove('tab-active');
+            postsTab.querySelector('span').classList.remove('lemon-green');
+            postsTab.querySelector('span').classList.add('text-gray-400');
+            discoverTab.classList.remove('tab-active');
+            discoverTab.querySelector('span').classList.remove('lemon-green');
+            discoverTab.querySelector('span').classList.add('text-gray-400');
+        });
+        
+        postsTab.addEventListener('click', () => {
+            chatsSection.classList.add('hidden');
+            discoverSection.classList.add('hidden');
+            postsSection.classList.remove('hidden');
+            postsTab.classList.add('tab-active');
+            postsTab.querySelector('span').classList.add('lemon-green');
+            postsTab.querySelector('span').classList.remove('text-gray-400');
+            chatsTab.classList.remove('tab-active');
+            chatsTab.querySelector('span').classList.remove('lemon-green');
+            chatsTab.querySelector('span').classList.add('text-gray-400');
+            discoverTab.classList.remove('tab-active');
+            discoverTab.querySelector('span').classList.remove('lemon-green');
+            discoverTab.querySelector('span').classList.add('text-gray-400');
+        });
+        
+        discoverTab.addEventListener('click', () => {
+            chatsSection.classList.add('hidden');
+            postsSection.classList.add('hidden');
+            discoverSection.classList.remove('hidden');
+            discoverTab.classList.add('tab-active');
+            discoverTab.querySelector('span').classList.add('lemon-green');
+            discoverTab.querySelector('span').classList.remove('text-gray-400');
+            chatsTab.classList.remove('tab-active');
+            chatsTab.querySelector('span').classList.remove('lemon-green');
+            chatsTab.querySelector('span').classList.add('text-gray-400');
+            postsTab.classList.remove('tab-active');
+            postsTab.querySelector('span').classList.remove('lemon-green');
+            postsTab.querySelector('span').classList.add('text-gray-400');
+        });
+        
+        newChatBtn.addEventListener('click', () => {
+            mainApp.classList.add('hidden');
+            newChatScreen.classList.remove('hidden');
+            loadUsers();
+        });
+        
+        backToChatsBtn.addEventListener('click', () => {
+            chatScreen.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+            
+            // Unsubscribe from messages listener when leaving chat
+            if (unsubscribeMessages) {
+                unsubscribeMessages();
+                unsubscribeMessages = null;
+            }
+        });
+        
+        backFromNewChatBtn.addEventListener('click', () => {
+            newChatScreen.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+        });
+        
+        homeBtn.addEventListener('click', () => {
+            chatsSection.classList.remove('hidden');
+            postsSection.classList.add('hidden');
+            discoverSection.classList.add('hidden');
+            chatsTab.classList.add('tab-active');
+            chatsTab.querySelector('span').classList.add('lemon-green');
+            chatsTab.querySelector('span').classList.remove('text-gray-400');
+            postsTab.classList.remove('tab-active');
+            postsTab.querySelector('span').classList.remove('lemon-green');
+            postsTab.querySelector('span').classList.add('text-gray-400');
+            discoverTab.classList.remove('tab-active');
+            discoverTab.querySelector('span').classList.remove('lemon-green');
+            discoverTab.querySelector('span').classList.add('text-gray-400');
+        });
+        
+        newPostBtn.addEventListener('click', () => {
+            chatsSection.classList.add('hidden');
+            discoverSection.classList.add('hidden');
+            postsSection.classList.remove('hidden');
+            postsTab.classList.add('tab-active');
+            postsTab.querySelector('span').classList.add('lemon-green');
+            postsTab.querySelector('span').classList.remove('text-gray-400');
+            chatsTab.classList.remove('tab-active');
+            chatsTab.querySelector('span').classList.remove('lemon-green');
+            chatsTab.querySelector('span').classList.add('text-gray-400');
+            discoverTab.classList.remove('tab-active');
+            discoverTab.querySelector('span').classList.remove('lemon-green');
+            discoverTab.querySelector('span').classList.add('text-gray-400');
+        });
+        
+        sendMessageBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        createPostBtn.addEventListener('click', createPost);
+        
+        postImage.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) { // 2MB limit
+                    alert('Image must be less than 2MB');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    previewImage.src = event.target.result;
+                    imagePreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        removeImageBtn.addEventListener('click', () => {
+            imagePreview.classList.add('hidden');
+            postImage.value = '';
+        });
+        
+        viewFollowersBtn.addEventListener('click', () => {
+            showFollowList('followers');
+        });
+        
+        viewFollowingBtn.addEventListener('click', () => {
+            showFollowList('following');
+        });
+        
+        backFromFollowBtn.addEventListener('click', () => {
+            followScreen.classList.add('hidden');
+            profileScreen.classList.remove('hidden');
+            
+            // Clean up listeners
+            if (unsubscribeFollowers) unsubscribeFollowers();
+            if (unsubscribeFollowing) unsubscribeFollowing();
+        });
+        
+        backFromUserProfileBtn.addEventListener('click', () => {
+            userProfileScreen.classList.add('hidden');
+            
+            // Return to previous screen
+            if (currentFollowListType) {
+                followScreen.classList.remove('hidden');
+            } else {
+                discoverSection.classList.remove('hidden');
+            }
+            
+            // Clean up listeners
+            if (unsubscribeUserPosts) unsubscribeUserPosts();
+        });
+        
+        searchUserInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const userItems = userList.querySelectorAll('.user-item');
+            
+            userItems.forEach(item => {
+                const username = item.getAttribute('data-username').toLowerCase();
+                if (username.includes(searchTerm)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        });
+        
+        userSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const userItems = discoverUsersList.querySelectorAll('.discover-user-item');
+            
+            userItems.forEach(item => {
+                const username = item.getAttribute('data-username').toLowerCase();
+                if (username.includes(searchTerm)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Functions
+        function setupRealTimeListeners(userId) {
+            // Set up real-time listeners for chats, posts, etc.
+            unsubscribeChats = db.collection('chats')
+                .where('participants', 'array-contains', userId)
+                .orderBy('lastMessageAt', 'desc')
+                .onSnapshot(snapshot => {
+                    loadChats(userId);
+                }, error => {
+                    console.error("Chats listener error: ", error);
+                });
+            
+            unsubscribePosts = db.collection('posts')
+                .where('userId', 'in', [userId, ...getFollowingUsers()])
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(snapshot => {
+                    loadPosts();
+                }, error => {
+                    console.error("Posts listener error: ", error);
+                });
+        }
+        
+        function getFollowingUsers() {
+            // In a real app, you would get this from the current user's following list
+            // For demo purposes, we'll return an empty array
+            return [];
+        }
+        
+        function loadUserProfile(userId) {
+            db.collection('users').doc(userId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        profileUsername.textContent = userData.username;
+                        profileEmail.textContent = userData.email;
+                        profileClass.textContent = userData.class;
+                        
+                        // Set avatar initials
+                        setAvatarInitials(profileAvatar, userData.username);
+                        setAvatarInitials(currentUserAvatar, userData.username);
+                        
+                        // Load followers/following counts
+                        profileFollowersCount.textContent = userData.followers ? userData.followers.length : 0;
+                        profileFollowingCount.textContent = userData.following ? userData.following.length : 0;
+                        
+                        // Load posts count
+                        db.collection('posts').where('userId', '==', userId).get()
+                            .then(snapshot => {
+                                profilePostsCount.textContent = snapshot.size;
+                            });
+                        
+                        // Set up profile actions
+                        profileActions.innerHTML = `
+                            <button class="w-full bg-gray-800 text-white p-2 rounded-lg font-medium hover:bg-gray-700">
+                                Edit Profile
+                            </button>
+                        `;
+                    }
+                });
+        }
+        
+        function loadChats(userId) {
+            // Unsubscribe from previous listener if exists
+            if (unsubscribeChats) unsubscribeChats();
+            
+            unsubscribeChats = db.collection('chats')
+                .where('participants', 'array-contains', userId)
+                .orderBy('lastMessageAt', 'desc')
+                .onSnapshot(snapshot => {
+                    chatList.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        chatList.innerHTML = `
+                            <div class="text-center py-10 text-gray-400">
+                                <p>No chats yet</p>
+                                <button id="startNewChatBtn" class="mt-4 text-lemon-green underline">Start a new chat</button>
+                            </div>
+                        `;
+                        
+                        document.getElementById('startNewChatBtn')?.addEventListener('click', () => {
+                            mainApp.classList.add('hidden');
+                            newChatScreen.classList.remove('hidden');
+                            loadUsers();
+                        });
+                        
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const chat = doc.data();
+                        const otherUserId = chat.participants.find(id => id !== userId);
+                        
+                        // Get other user's info
+                        db.collection('users').doc(otherUserId).get()
+                            .then(userDoc => {
+                                if (userDoc.exists) {
+                                    const userData = userDoc.data();
+                                    const lastMessageTime = chat.lastMessageAt ? formatTime(chat.lastMessageAt.toDate()) : '';
+                                    
+                                    const chatElement = document.createElement('div');
+                                    chatElement.className = 'p-3 flex items-center hover:bg-gray-900 cursor-pointer';
+                                    chatElement.innerHTML = `
+                                        <div class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center mr-3">
+                                            ${getAvatarInitials(userData.username)}
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex justify-between items-center">
+                                                <h3 class="font-medium">${userData.username}</h3>
+                                                <span class="text-xs text-gray-400">${lastMessageTime}</span>
+                                            </div>
+                                            <p class="text-sm text-gray-400 truncate">${chat.lastMessage || 'No messages yet'}</p>
+                                        </div>
+                                        ${chat.unreadCount && chat.unreadCount[userId] > 0 ? 
+                                            `<span class="bg-lemon-green text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ml-2">${chat.unreadCount[userId]}</span>` : ''}
+                                    `;
+                                    
+                                    chatElement.addEventListener('click', () => {
+                                        openChat(doc.id, otherUserId, userData.username);
+                                    });
+                                    
+                                    chatList.appendChild(chatElement);
+                                }
+                            });
+                    });
+                }, error => {
+                    console.error("Error loading chats: ", error);
+                });
+        }
+        
+        function loadUsers() {
+            // In a real app, you would query Firestore for all users except current user
+            db.collection('users')
+                .where('userId', '!=', currentUser.uid)
+                .get()
+                .then(snapshot => {
+                    userList.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        userList.innerHTML = '<p class="text-gray-400 text-center py-4">No other users found</p>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const user = doc.data();
+                        const userElement = document.createElement('div');
+                        userElement.className = 'py-3 flex items-center cursor-pointer user-item';
+                        userElement.setAttribute('data-username', user.username);
+                        userElement.innerHTML = `
+                            <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center mr-3">
+                                ${getAvatarInitials(user.username)}
+                            </div>
+                            <div>
+                                <h3 class="font-medium">${user.username}</h3>
+                                <p class="text-xs text-gray-400">${user.class}</p>
+                            </div>
+                        `;
+                        
+                        userElement.addEventListener('click', () => {
+                            startNewChat(doc.id, user.username);
+                        });
+                        
+                        userList.appendChild(userElement);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error loading users: ", error);
+                });
+        }
+        
+        function loadDiscoverUsers() {
+            // Unsubscribe from previous listener if exists
+            if (unsubscribeDiscoverUsers) unsubscribeDiscoverUsers();
+            
+            unsubscribeDiscoverUsers = db.collection('users')
+                .where('userId', '!=', currentUser.uid)
+                .onSnapshot(snapshot => {
+                    discoverUsersList.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        discoverUsersList.innerHTML = '<p class="text-gray-400 text-center py-4">No other users found</p>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const user = doc.data();
+                        const userElement = document.createElement('div');
+                        userElement.className = 'py-3 flex items-center justify-between discover-user-item';
+                        userElement.setAttribute('data-username', user.username);
+                        userElement.innerHTML = `
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center mr-3">
+                                    ${getAvatarInitials(user.username)}
+                                </div>
+                                <div>
+                                    <h3 class="font-medium">${user.username}</h3>
+                                    <p class="text-xs text-gray-400">${user.class}</p>
+                                </div>
+                            </div>
+                            <button class="follow-btn bg-lemon-green text-black text-sm px-3 py-1 rounded-lg font-medium" data-user-id="${doc.id}">
+                                Follow
+                            </button>
+                        `;
+                        
+                        // Add click event to view user profile
+                        userElement.querySelector('div').addEventListener('click', () => {
+                            viewUserProfile(doc.id);
+                        });
+                        
+                        // Add follow button functionality
+                        userElement.querySelector('.follow-btn').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            followUser(doc.id, userElement.querySelector('.follow-btn'));
+                        });
+                        
+                        discoverUsersList.appendChild(userElement);
+                    });
+                }, error => {
+                    console.error("Error loading discover users: ", error);
+                });
+        }
+        
+        function followUser(userId, button) {
+            // Add current user to the target user's followers list
+            db.collection('users').doc(userId).update({
+                followers: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+            })
+            .then(() => {
+                // Add target user to current user's following list
+                return db.collection('users').doc(currentUser.uid).update({
+                    following: firebase.firestore.FieldValue.arrayUnion(userId)
+                });
+            })
+            .then(() => {
+                button.textContent = 'Following';
+                button.classList.remove('bg-lemon-green');
+                button.classList.add('bg-gray-700', 'text-white');
+                
+                // Update followers count in profile
+                if (profileFollowersCount) {
+                    profileFollowersCount.textContent = parseInt(profileFollowersCount.textContent) + 1;
+                }
+            })
+            .catch(error => {
+                console.error("Error following user: ", error);
+            });
+        }
+        
+        function viewUserProfile(userId) {
+            currentViewingUserId = userId;
+            discoverSection.classList.add('hidden');
+            userProfileScreen.classList.remove('hidden');
+            
+            // Load user profile data
+            db.collection('users').doc(userId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        userProfileUsername.textContent = userData.username;
+                        userProfileClass.textContent = userData.class;
+                        
+                        // Set avatar initials
+                        setAvatarInitials(userProfileAvatar, userData.username);
+                        
+                        // Load followers/following counts
+                        userProfileFollowersCount.textContent = userData.followers ? userData.followers.length : 0;
+                        userProfileFollowingCount.textContent = userData.following ? userData.following.length : 0;
+                        
+                        // Check if current user is following this user
+                        const isFollowing = userData.followers && userData.followers.includes(currentUser.uid);
+                        
+                        // Set up follow/unfollow button
+                        userProfileActions.innerHTML = `
+                            <button class="w-full ${isFollowing ? 'bg-gray-700 text-white' : 'bg-lemon-green text-black'} p-2 rounded-lg font-medium follow-user-btn">
+                                ${isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                        `;
+                        
+                        // Add follow/unfollow functionality
+                        document.querySelector('.follow-user-btn')?.addEventListener('click', () => {
+                            if (isFollowing) {
+                                unfollowUser(userId);
+                            } else {
+                                followUser(userId, document.querySelector('.follow-user-btn'));
+                            }
+                        });
+                        
+                        // Load user's posts
+                        loadUserPosts(userId);
+                    }
+                });
+        }
+        
+        function unfollowUser(userId) {
+            // Remove current user from the target user's followers list
+            db.collection('users').doc(userId).update({
+                followers: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+            })
+            .then(() => {
+                // Remove target user from current user's following list
+                return db.collection('users').doc(currentUser.uid).update({
+                    following: firebase.firestore.FieldValue.arrayRemove(userId)
+                });
+            })
+            .then(() => {
+                // Update button
+                const followBtn = document.querySelector('.follow-user-btn');
+                if (followBtn) {
+                    followBtn.textContent = 'Follow';
+                    followBtn.classList.remove('bg-gray-700', 'text-white');
+                    followBtn.classList.add('bg-lemon-green', 'text-black');
+                }
+                
+                // Update followers count in profile
+                if (profileFollowersCount) {
+                    profileFollowersCount.textContent = parseInt(profileFollowersCount.textContent) - 1;
+                }
+            })
+            .catch(error => {
+                console.error("Error unfollowing user: ", error);
+            });
+        }
+        
+        function loadUserPosts(userId) {
+            // Unsubscribe from previous listener if exists
+            if (unsubscribeUserPosts) unsubscribeUserPosts();
+            
+            unsubscribeUserPosts = db.collection('posts')
+                .where('userId', '==', userId)
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(snapshot => {
+                    userPostsFeed.innerHTML = '';
+                    userProfilePostsCount.textContent = snapshot.size;
+                    
+                    if (snapshot.empty) {
+                        userPostsFeed.innerHTML = '<p class="text-gray-400 text-center py-4">No posts yet</p>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const post = doc.data();
+                        renderPost(doc.id, post, userPostsFeed);
+                    });
+                }, error => {
+                    console.error("Error loading user posts: ", error);
+                });
+        }
+        
+        function showFollowList(type) {
+            currentFollowListType = type;
+            profileScreen.classList.add('hidden');
+            followScreen.classList.remove('hidden');
+            
+            followScreenTitle.textContent = type === 'followers' ? 'Followers' : 'Following';
+            
+            // Load followers or following list
+            db.collection('users').doc(currentUser.uid).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        const userIds = type === 'followers' ? userData.followers : userData.following;
+                        
+                        if (!userIds || userIds.length === 0) {
+                            followList.innerHTML = `<p class="text-gray-400 text-center py-4">No ${type} found</p>`;
+                            return;
+                        }
+                        
+                        // Unsubscribe from previous listeners
+                        if (unsubscribeFollowers) unsubscribeFollowers();
+                        if (unsubscribeFollowing) unsubscribeFollowing();
+                        
+                        // Set up real-time listener for followers/following
+                        const unsubscribe = db.collection('users')
+                            .where('userId', 'in', userIds)
+                            .onSnapshot(snapshot => {
+                                followList.innerHTML = '';
+                                
+                                snapshot.forEach(userDoc => {
+                                    const user = userDoc.data();
+                                    const userElement = document.createElement('div');
+                                    userElement.className = 'py-3 flex items-center cursor-pointer';
+                                    userElement.innerHTML = `
+                                        <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center mr-3">
+                                            ${getAvatarInitials(user.username)}
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium">${user.username}</h3>
+                                            <p class="text-xs text-gray-400">${user.class}</p>
+                                        </div>
+                                    `;
+                                    
+                                    userElement.addEventListener('click', () => {
+                                        viewUserProfile(userDoc.id);
+                                    });
+                                    
+                                    followList.appendChild(userElement);
+                                });
+                            }, error => {
+                                console.error(`Error loading ${type}: `, error);
+                            });
+                        
+                        if (type === 'followers') {
+                            unsubscribeFollowers = unsubscribe;
+                        } else {
+                            unsubscribeFollowing = unsubscribe;
+                        }
+                    }
+                });
+        }
+        
+        function openChat(chatId, userId, username) {
+            currentChatId = chatId;
+            currentChatUser = { id: userId, username: username };
+            
+            chatUserName.textContent = username;
+            
+            // Mark messages as read
+            db.collection('chats').doc(chatId).update({
+                [`unreadCount.${currentUser.uid}`]: 0
+            });
+            
+            mainApp.classList.add('hidden');
+            chatScreen.classList.remove('hidden');
+            
+            // Load messages for this chat
+            loadMessages(chatId);
+        }
+        
+        function startNewChat(userId, username) {
+            // Check if chat already exists between these users
+            db.collection('chats')
+                .where('participants', 'array-contains', currentUser.uid)
+                .get()
+                .then(snapshot => {
+                    let existingChat = null;
+                    
+                    snapshot.forEach(doc => {
+                        const chat = doc.data();
+                        if (chat.participants.includes(userId)) {
+                            existingChat = doc;
+                        }
+                    });
+                    
+                    if (existingChat) {
+                        // Open existing chat
+                        openChat(existingChat.id, userId, username);
+                    } else {
+                        // Create new chat
+                        const newChat = {
+                            participants: [currentUser.uid, userId],
+                            lastMessage: '',
+                            lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            unreadCount: {
+                                [currentUser.uid]: 0,
+                                [userId]: 0
+                            },
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        
+                        db.collection('chats').add(newChat)
+                            .then(docRef => {
+                                openChat(docRef.id, userId, username);
+                            });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error starting new chat: ", error);
+                });
+        }
+        
+        function loadMessages(chatId) {
+            // Unsubscribe from previous listener if exists
+            if (unsubscribeMessages) unsubscribeMessages();
+            
+            unsubscribeMessages = db.collection('chats').doc(chatId).collection('messages')
+                .orderBy('createdAt', 'asc')
+                .onSnapshot(snapshot => {
+                    messagesContainer.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        messagesContainer.innerHTML = '<p class="text-gray-400 text-center py-4">No messages yet</p>';
+                        return;
+                    }
+                    
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const message = change.doc.data();
+                            addMessageToChat(message, change.doc.id);
+                        }
+                    });
+                    
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }, error => {
+                    console.error("Error loading messages: ", error);
+                });
+        }
+        
+        function addMessageToChat(message, messageId) {
+            const isCurrentUser = message.senderId === currentUser.uid;
+            const messageTime = message.createdAt ? formatTime(message.createdAt.toDate()) : 'Just now';
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = `chat-bubble ${isCurrentUser ? 'sent' : 'received'} new-message`;
+            messageElement.innerHTML = `
+                <p>${message.text}</p>
+                <p class="text-xs mt-1 ${isCurrentUser ? 'text-gray-600' : 'text-gray-400'}">${messageTime}</p>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            
+            // Scroll to bottom if this is the latest message
+            if (isCurrentUser || messagesContainer.scrollHeight - messagesContainer.scrollTop < messagesContainer.clientHeight + 100) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+        
+        function sendMessage() {
+            const messageText = messageInput.value.trim();
+            
+            if (messageText && currentChatId) {
+                const newMessage = {
+                    text: messageText,
+                    senderId: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                // Add message to subcollection
+                db.collection('chats').doc(currentChatId).collection('messages').add(newMessage)
+                    .then(() => {
+                        // Update chat's last message and timestamp
+                        return db.collection('chats').doc(currentChatId).update({
+                            lastMessage: messageText,
+                            lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            [`unreadCount.${currentChatUser.id}`]: firebase.firestore.FieldValue.increment(1)
+                        });
+                    })
+                    .then(() => {
+                        messageInput.value = '';
+                    })
+                    .catch(error => {
+                        console.error("Error sending message: ", error);
+                    });
+            }
+        }
+        
+        function loadPosts() {
+            // Unsubscribe from previous listener if exists
+            if (unsubscribePosts) unsubscribePosts();
+            
+            unsubscribePosts = db.collection('posts')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(snapshot => {
+                    postsFeed.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        postsFeed.innerHTML = '<p class="text-gray-400 text-center py-4">No posts yet</p>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const post = doc.data();
+                        renderPost(doc.id, post, postsFeed);
+                    });
+                }, error => {
+                    console.error("Error loading posts: ", error);
+                });
+        }
+        
+        function renderPost(postId, post, container) {
+            // Get user info for the post
+            db.collection('users').doc(post.userId).get()
+                .then(userDoc => {
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        const postTime = post.createdAt ? formatTime(post.createdAt.toDate()) : 'Just now';
+                        
+                        const postElement = document.createElement('div');
+                        postElement.className = 'post-card p-4';
+                        postElement.innerHTML = `
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center mr-3">
+                                    ${getAvatarInitials(userData.username)}
+                                </div>
+                                <div>
+                                    <h3 class="font-medium">${userData.username}</h3>
+                                    <p class="text-xs text-gray-400">${postTime}</p>
+                                </div>
+                            </div>
+                            
+                            <h4 class="font-bold text-lg mb-2">${post.title}</h4>
+                            <p class="text-gray-300 mb-3">${post.content}</p>
+                            
+                            ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" class="w-full rounded-lg mb-3">` : ''}
+                            
+                            <div class="flex items-center text-gray-400">
+                                <button class="like-btn flex items-center mr-4 ${post.likes && post.likes.includes(currentUser.uid) ? 'liked' : ''}" data-post-id="${postId}">
+                                    <i class="fas fa-heart mr-1"></i>
+                                    <span class="text-sm">${post.likes ? post.likes.length : 0}</span>
+                                </button>
+                                <button class="flex items-center comment-btn" data-post-id="${postId}">
+                                    <i class="fas fa-comment mr-1"></i>
+                                    <span class="text-sm">${post.comments ? post.comments.length : 0}</span>
+                                </button>
+                            </div>
+                        `;
+                        
+                        // Add like button functionality
+                        postElement.querySelector('.like-btn').addEventListener('click', function() {
+                            toggleLike(postId, this);
+                        });
+                        
+                        container.appendChild(postElement);
+                    }
+                });
+        }
+        
+        function toggleLike(postId, button) {
+            const isLiked = button.classList.contains('liked');
+            const likeCount = button.querySelector('span');
+            
+            if (isLiked) {
+                // Remove like
+                db.collection('posts').doc(postId).update({
+                    likes: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+                })
+                .then(() => {
+                    button.classList.remove('liked');
+                    likeCount.textContent = parseInt(likeCount.textContent) - 1;
+                });
+            } else {
+                // Add like
+                db.collection('posts').doc(postId).update({
+                    likes: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+                })
+                .then(() => {
+                    button.classList.add('liked');
+                    likeCount.textContent = parseInt(likeCount.textContent) + 1;
+                });
+            }
+        }
+        
+        function createPost() {
+            const title = postTitle.value.trim();
+            const content = postContent.value.trim();
+            const file = postImage.files[0];
+            
+            if (!title || !content) {
+                alert('Please fill in title and content');
+                return;
+            }
+            
+            // Create post object
+            const newPost = {
+                title: title,
+                content: content,
+                userId: currentUser.uid,
+                likes: [],
+                comments: [],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            if (file) {
+                // Upload image first
+                const storageRef = storage.ref(`posts/${currentUser.uid}/${Date.now()}`);
+                storageRef.put(file)
+                    .then(snapshot => {
+                        return snapshot.ref.getDownloadURL();
+                    })
+                    .then(downloadURL => {
+                        // Add image URL to post
+                        newPost.imageUrl = downloadURL;
+                        return db.collection('posts').add(newPost);
+                    })
+                    .then(() => {
+                        // Clear form
+                        postTitle.value = '';
+                        postContent.value = '';
+                        postImage.value = '';
+                        imagePreview.classList.add('hidden');
+                        
+                        // Show success
+                        alert('Post created successfully!');
+                    })
+                    .catch(error => {
+                        console.error("Error creating post: ", error);
+                        alert('Error creating post');
+                    });
+            } else {
+                // Create post without image
+                db.collection('posts').add(newPost)
+                    .then(() => {
+                        // Clear form
+                        postTitle.value = '';
+                        postContent.value = '';
+                        
+                        // Show success
+                        alert('Post created successfully!');
+                    })
+                    .catch(error => {
+                        console.error("Error creating post: ", error);
+                        alert('Error creating post');
+                    });
+            }
+        }
+        
+        function formatTime(date) {
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+            
+            if (diffInSeconds < 60) {
+                return 'Just now';
+            } else if (diffInSeconds < 3600) {
+                return `${Math.floor(diffInSeconds / 60)}m ago`;
+            } else if (diffInSeconds < 86400) {
+                return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            } else if (diffInSeconds < 604800) {
+                return `${Math.floor(diffInSeconds / 86400)}d ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        function setAvatarInitials(element, username) {
+            const initials = getAvatarInitials(username);
+            element.innerHTML = initials;
+        }
+        
+        function getAvatarInitials(username) {
+            if (!username) return '<i class="fas fa-user text-gray-400"></i>';
+            
+            const parts = username.split(' ');
+            let initials = parts[0].charAt(0).toUpperCase();
+            
+            if (parts.length > 1) {
+                initials += parts[parts.length - 1].charAt(0).toUpperCase();
+            }
+            
+            return initials;
+        }
+    </script>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=Jerrypro/new-josna-lgz-sociality" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
+</html>
